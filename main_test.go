@@ -201,3 +201,24 @@ func TestRedirectHandlerRejectsWrongMethod(t *testing.T) {
 		t.Fatalf("expected status %d, got %d: %s", http.StatusMethodNotAllowed, res.Code, res.Body.String())
 	}
 }
+
+func TestURLRepositoryCreateAndGet(t *testing.T) {
+	repo := NewURLRepository()
+
+	shortURL, err := repo.Create("https://example.com")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	got, ok := repo.Get(shortURL)
+	if !ok {
+		t.Fatal("expected URL to exist")
+	}
+
+	if got.RedirectURL != "https://example.com" {
+		t.Fatalf("expected redirect URL %q, got %q",
+			"https://example.com",
+			got.RedirectURL,
+		)
+	}
+}
