@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -15,7 +14,7 @@ import (
 type URL struct {
 	ID          int       `json:"id"`
 	RedirectURL string    `json:"redirect_url"`
-	ShortenURL  string    `json:"shorten_url"`
+	ShortURL    string    `json:"shorten_url"`
 	IsActive    bool      `json:"is_active"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
@@ -33,18 +32,9 @@ func NewURLRepository() *URLRepository {
 	}
 }
 
-func GenerateHash(url string) (string, error) {
-	hasher := md5.New()
-
-	_, err := hasher.Write([]byte(url))
-	if err != nil {
-		return "", fmt.Errorf("error in creating hash: %w", err)
-	}
-
-	data := hasher.Sum(nil)
-	hash := hex.EncodeToString(data)
-
-	return hash[:8], nil
+func GenerateHash(rawURL string) string {
+	hash := md5.Sum([]byte(rawURL))
+	return hex.EncodeToString(hash[:])[:8]
 }
 
 // IsURLValid checks whether a raw string is a valid absolute HTTP/HTTPS URL.
@@ -70,18 +60,10 @@ func IsURLValid(rawURL string) bool {
 }
 
 func (r *URLRepository) Create(rawURL string) (string, error) {
-	rawURL = strings.TrimSpace(rawURL)
-	if !IsURLValid(rawURL) {
-		return "", fmt.Errorf("invalid URL")
-	}
-
-	shortURL, err := GenerateHash(rawURL)
-	if err != nil {
-		return "", fmt.Errorf("error generating short code: %w", err)
-	}
+	shortURL := GenerateHash(rawURL)
 
 	if existing, ok := r.urls[shortURL]; ok {
-		return existing.ShortenURL, nil
+		return existing.ShortURL, nil
 	}
 
 	id := r.nextID
@@ -90,7 +72,7 @@ func (r *URLRepository) Create(rawURL string) (string, error) {
 	r.urls[shortURL] = URL{
 		ID:          id,
 		RedirectURL: rawURL,
-		ShortenURL:  shortURL,
+		ShortURL:    shortURL,
 		IsActive:    true,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
